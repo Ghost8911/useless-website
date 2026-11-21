@@ -8,15 +8,17 @@
 :root{--bg:#0e0e0e;--fg:#f2f2f2;--ac:#ffe600;--bad:#ff3b30;--ok:#34c759}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--fg);font:16px/1.5 ui-monospace,Menlo,Consolas,monospace;display:flex;flex-direction:column;user-select:none}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 ui-monospace,Menlo,Consolas,monospace;display:flex;flex-direction:column;user-select:none;transition:background .4s,box-shadow .3s}
+body.danger{box-shadow:inset 0 0 60px rgba(255,59,48,.35)}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:3px solid var(--fg);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:14px}
 header.mad{animation:sh .25s;border-color:var(--bad)}
 header.mad #rage{color:var(--bad)}
+#rage{display:inline-block;transition:transform .15s,color .2s}
 .hdr-r{display:flex;align-items:center;gap:14px}
 #mute{background:none;border:2px solid var(--fg);color:var(--fg);font:inherit;font-size:12px;padding:2px 8px;cursor:pointer}
 #stage{position:relative;flex:1;overflow:hidden;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
 #stage.flash{animation:fl .7s}
-@keyframes fl{from{background:#1f3d00}to{background:var(--bg)}}
+@keyframes fl{from{background:#1f3d00}to{background:transparent}}
 footer{padding:12px 18px;border-top:3px solid var(--fg);min-height:52px;color:var(--ac);font-weight:700}
 h1{font-size:clamp(28px,6vw,56px);margin:0;line-height:1.05;text-transform:uppercase}
 p{margin:0;max-width:60ch}
@@ -31,12 +33,15 @@ p{margin:0;max-width:60ch}
 .bar i{display:block;height:100%;width:0;background:var(--ac)}
 .shake{animation:sh .3s}
 @keyframes sh{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
-.ghost{font-size:30px;font-weight:700;color:var(--bg);user-select:all;-webkit-user-select:all}
+.ghost{font-size:30px;font-weight:700;color:transparent;user-select:all;-webkit-user-select:all}
 .ghost::selection{background:var(--ac);color:#000}
 .decoy{color:var(--bad);font-size:22px}
 .hint{color:var(--ac)}
 .meta{font-size:13px;opacity:.75}
 #dot{font-weight:700;font-size:1.3em;cursor:pointer}
+.pop{position:fixed;pointer-events:none;color:var(--bad);font-weight:700;font-size:18px;z-index:999;animation:up .55s ease-out forwards}
+@keyframes up{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-34px)}}
+.bait{position:absolute;background:#161616;border:3px solid var(--fg);box-shadow:8px 8px 0 var(--bad);padding:20px 24px;display:flex;flex-direction:column;gap:12px;align-items:center;z-index:20}
 </style>
 </head>
 <body>
@@ -54,6 +59,10 @@ p{margin:0;max-width:60ch}
 const $ = s => document.querySelector(s), stage = $('#stage'), hdr = $('#hdr');
 const pick = a => a[Math.floor(Math.random() * a.length)];
 let lv = 0, rage = 0, t0 = 0, timers = [], rafs = [], cleanup = [], locked = false, misses = 0, muted = false;
+let ptr = { x: innerWidth / 2, y: innerHeight / 2 };
+
+document.addEventListener('pointermove', e => { ptr.x = e.clientX; ptr.y = e.clientY; }, { passive: true });
+document.addEventListener('pointerdown', e => { ptr.x = e.clientX; ptr.y = e.clientY; }, { passive: true });
 
 let actx;
 function tone(freq, dur = 0.08, type = 'square', slide = 0) {
@@ -79,37 +88,83 @@ $('#mute').onclick = e => {
 };
 
 const wins = ['Fine. You got that one.', 'Lucky.', 'Okay, okay.', 'Wow. Took you long enough.', 'Cleared. Do not get cocky.'];
-const taunts = ['Not that.', 'Have you tried not failing?', 'Bold strategy.', 'The interface is laughing.', 'Wrong. Confidently wrong.', 'Think outside the mouse.', 'It is not broken. You are.'];
+const taunts = ['Not that.', 'Have you tried not failing?', 'Bold strategy.', 'The interface is laughing.', 'Wrong. Confidently wrong.', 'Think outside the mouse.', 'It is not broken. You are.', 'Your mouse privileges should be revoked.', 'Getting warm. Mostly from anger.'];
 
 function say(t){ $('#taunt').textContent = t; }
+
+function spawnPop(n){
+  const p = el('span', 'pop', '+' + n);
+  p.style.left = ptr.x + 'px';
+  p.style.top = (ptr.y - 10) + 'px';
+  document.body.append(p);
+  setTimeout(() => p.remove(), 550);
+}
+
+function updateHeat(){
+  const rEl = $('#rage');
+  rEl.textContent = rage;
+  if (rage === 0) {
+    document.body.style.background = 'var(--bg)';
+    document.body.classList.remove('danger');
+    rEl.style.transform = 'scale(1)';
+    rEl.style.color = '';
+    return;
+  }
+  const ratio = Math.min(1, rage / 100);
+  const red = Math.round(14 + ratio * 38);
+  document.body.style.background = `rgb(${red}, 10, 10)`;
+  rEl.style.transform = `scale(${1 + ratio * 0.35})`;
+  if (rage >= 60) rEl.style.color = 'var(--bad)';
+  document.body.classList.toggle('danger', rage >= 80);
+}
+
 function bump(n = 1){
   if (locked) return;
   rage += n;
-  $('#rage').textContent = rage;
+  updateHeat();
+  spawnPop(n);
   hdr.classList.remove('mad'); void hdr.offsetWidth; hdr.classList.add('mad');
   tone(150, 0.12, 'sawtooth', 85);
+  if (rage >= 80 && rage <= 100) {
+    later(() => tone(95, 0.07, 'sine', 65), 110);
+  }
   if (rage > 100) rageQuit();
 }
 
-function rageQuit(){
+function rageQuit(customMsg){
   locked = true;
   clear();
-  tone(120, 0.4, 'sawtooth', 45);
+  tone(120, 0.45, 'sawtooth', 42);
   $('#lvl').textContent = 'MELTDOWN';
-  say('Surprise: 100 rage is the limit. Back to Level 1.');
+  say(customMsg || 'Surprise: 100 rage is the limit. Back to Level 1.');
   const b = ok(el('button', 'btn', 'Try Again'));
   b.onclick = () => {
     locked = false;
     rage = 0; misses = 0; lv = 0; t0 = Date.now();
-    $('#rage').textContent = 0;
+    updateHeat();
     load();
   };
   stage.append(
     el('h1', 0, 'RAGE OVERFLOW'),
-    el('p', 0, 'You passed 100 rage. Oh, did we forget to mention there was a limit? Start over.'),
+    el('p', 0, customMsg ? 'No cheat codes allowed. Start from the beginning.' : 'You passed 100 rage. Oh, did we forget to mention there was a limit? Start over.'),
     b
   );
 }
+
+// Konami code anti-cheat
+const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let kIdx = 0;
+document.addEventListener('keydown', e => {
+  if (locked) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  kIdx = (k === konami[kIdx]) ? kIdx + 1 : (k === konami[0] ? 1 : 0);
+  if (kIdx === konami.length) {
+    kIdx = 0;
+    rage = 101;
+    updateHeat();
+    rageQuit('Nice try, hacker. Back to Level 1.');
+  }
+});
 
 function el(tag, cls, html){ const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 function later(fn, ms){ const id = setTimeout(fn, ms); timers.push(id); return id; }
@@ -166,7 +221,11 @@ const levels = [
       const row = el('div', 'row');
       ['CONTINUE', 'NEXT ▶', 'GO'].forEach(t => {
         const f = el('button', 'btn', t);
-        f.onclick = () => { f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake'); say('That button is a liar.'); };
+        f.onclick = () => {
+          f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake');
+          [...row.children].sort(() => Math.random() - 0.5).forEach(btn => row.append(btn));
+          say('That button is a liar.');
+        };
         row.append(f);
       });
       const p = el('p', 0, 'Everything you need is in this sentence<span id="dot">.</span>');
@@ -197,9 +256,22 @@ const levels = [
         else msg.textContent = 'Loading… ' + Math.floor(p) + '%';
         fill.style.width = p + '%';
       });
+      const row = el('div', 'row');
       const w = el('button', 'btn', 'Wait'); w.onclick = () => say('It will definitely finish. Probably.');
+      let sec = 5;
+      const ad = ok(el('button', 'btn ghost', 'Skip Ad (5s)'));
+      const cd = setInterval(() => {
+        if (--sec > 0) ad.textContent = `Skip Ad (${sec}s)`;
+        else { clearInterval(cd); ad.textContent = 'Skip Ad'; }
+      }, 1000);
+      timers.push(cd);
+      ad.onclick = () => {
+        if (sec > 0) { say('Wait for the timer.'); bump(); }
+        else { ad.textContent = 'Nope.'; say('You really thought an ad button would help?'); bump(2); }
+      };
+      row.append(w, ad);
       const c = ok(el('button', 'btn ghost tiny', 'cancel')); c.onclick = () => { msg.textContent = 'Cancelled.'; win(); };
-      stage.append(msg, bar, w, c);
+      stage.append(msg, bar, row, c);
     } },
   { title: 'Level 5: Password', hint: 'Look up. Higher. The browser tab.',
     run(){
@@ -243,21 +315,30 @@ const levels = [
       });
       stage.append(el('p', 0, 'Prove you are human.'), c, el('p', 0, 'I am not a robot'));
     } },
-  { title: 'Level 9: Hold Still', hint: 'Do nothing. No mouse, no keys, no scrolling. Just wait.',
+  { title: 'Level 9: Hold Still', hint: 'Do nothing. Ignore the popup. Do not touch anything.',
     run(){
-      const start = Date.now(); let end = start + 8000;
+      const start = Date.now(); let end = start + 8000, baited = false;
       const msg = el('p', 0, 'Do nothing for 8 seconds. Do not touch anything.');
       const bar = el('div', 'bar', '<i></i>'), fill = bar.firstChild;
+      let baitBox = null;
       stage.append(msg, bar);
       const reset = () => {
         if (Date.now() - start < 1200 || locked) return;
         if (end - Date.now() < 7000) { bump(); msg.textContent = 'You moved. Starting over.'; }
         end = Date.now() + 8000;
+        baited = false;
+        if (baitBox) { baitBox.remove(); baitBox = null; }
       };
       ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchmove'].forEach(ev => on(document, ev, reset, { passive: true }));
       frame(() => {
         const left = end - Date.now();
         fill.style.width = Math.min(100, Math.max(0, 100 - left / 80)) + '%';
+        if (!baited && left <= 1800 && left > 0) {
+          baited = true;
+          tone(680, 0.08, 'square', 520);
+          baitBox = el('div', 'bait', '<p><b>Session expiring!</b></p><button class="btn">I am still here</button>');
+          stage.append(baitBox);
+        }
         if (left <= 0) win();
       });
     } }
@@ -265,10 +346,11 @@ const levels = [
 
 function intro(){
   clear();
+  updateHeat();
   $('#lvl').textContent = '9 Levels';
   const best = JSON.parse(localStorage.getItem('uitrap_best') || 'null');
   const startBtn = ok(el('button', 'btn', 'Start Game'));
-  startBtn.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; tone(520, 0.08); load(); };
+  startBtn.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); updateHeat(); tone(520, 0.08); load(); };
   stage.append(
     el('h1', 0, 'UI Trap'),
     el('p', 0, 'A 9-level hostile interface puzzle. Every misclick adds rage.'),
@@ -300,7 +382,7 @@ function finish(){
   say('Now make a friend play it.');
   const row = el('div', 'row');
   const again = ok(el('button', 'btn', 'Play Again'));
-  again.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; load(); };
+  again.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); updateHeat(); load(); };
   const share = ok(el('button', 'btn ghost', 'Copy Score'));
   share.onclick = () => {
     navigator.clipboard?.writeText(`UI Trap — Cleared 9/9 in ${s}s with ${rage} rage 😡`);
