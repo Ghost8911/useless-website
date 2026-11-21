@@ -148,6 +148,26 @@ const levels = [
       b.onclick = go; i.onkeydown = e => { if (e.key === 'Enter') go(); };
       stage.append(el('p', 0, 'Enter the code shown below.'), el('p', 'decoy', 'CODE: 0000'), g, i, b);
     } },
+  { title: 'Level 7: Cookies', hint: 'Banners hate the mouse but love the Escape key.',
+    run(){
+      const box = el('div', 'row');
+      ['Accept all', 'Accept some', 'Manage'].forEach(t => {
+        const f = el('button', 'btn', t);
+        f.onclick = () => { say('Cookies accepted. All of them. Forever.'); bump(2); };
+        box.append(f);
+      });
+      stage.append(el('p', 0, 'We value your privacy. Please choose.'), box);
+      on(document, 'keydown', e => { if (e.key === 'Escape') win(); });
+    } },
+  { title: 'Level 8: Not a Robot', hint: 'Robots click. Humans press Space. Tab to the box first.',
+    run(){
+      const c = ok(el('input')); c.type = 'checkbox'; c.style.cssText = 'width:44px;height:44px';
+      on(c, 'click', e => {
+        if (e.detail > 0) { e.preventDefault(); bump(); say('A robot would click. Try again.'); }
+        else win();
+      });
+      stage.append(el('p', 0, 'Prove you are human.'), c, el('p', 0, 'I am not a robot'));
+    } },
   { title: 'Final: Hold Still', hint: 'Do nothing. No mouse, no keys, no scrolling. Just wait.',
     run(){
       const start = Date.now(); let end = start + 8000;
