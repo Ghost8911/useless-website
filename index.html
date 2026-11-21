@@ -44,18 +44,17 @@ p{margin:0;max-width:60ch}
   <span>UI Trap</span>
   <span id="lvl">Ready</span>
   <div class="hdr-r">
-    <span>😡 rage: <b id="rage">0</b></span>
+    <span>😡 rage: <b id="rage">0</b>/500</span>
     <button id="mute" title="Toggle Sound">SFX: ON</button>
   </div>
 </header>
 <main id="stage"></main>
-<footer id="taunt">9 levels. Trust nothing on the screen.</footer>
+<footer id="taunt">9 levels. Pass 500 rage and you start over.</footer>
 <script>
 const $ = s => document.querySelector(s), stage = $('#stage'), hdr = $('#hdr');
 const pick = a => a[Math.floor(Math.random() * a.length)];
 let lv = 0, rage = 0, t0 = 0, timers = [], rafs = [], cleanup = [], locked = false, misses = 0, muted = false;
 
-// Tiny Web Audio synth (0 external assets)
 let actx;
 function tone(freq, dur = 0.08, type = 'square', slide = 0) {
   if (muted) return;
@@ -84,11 +83,34 @@ const taunts = ['Not that.', 'Have you tried not failing?', 'Bold strategy.', 'T
 
 function say(t){ $('#taunt').textContent = t; }
 function bump(n = 1){
+  if (locked) return;
   rage += n;
   $('#rage').textContent = rage;
   hdr.classList.remove('mad'); void hdr.offsetWidth; hdr.classList.add('mad');
   tone(150, 0.12, 'sawtooth', 85);
+  if (rage > 500) rageQuit();
 }
+
+function rageQuit(){
+  locked = true;
+  clear();
+  tone(120, 0.4, 'sawtooth', 45);
+  $('#lvl').textContent = 'MELTDOWN';
+  say('You actually raged out. Back to Level 1.');
+  const b = ok(el('button', 'btn', 'Try Again'));
+  b.onclick = () => {
+    locked = false;
+    rage = 0; misses = 0; lv = 0; t0 = Date.now();
+    $('#rage').textContent = 0;
+    load();
+  };
+  stage.append(
+    el('h1', 0, 'RAGE OVERFLOW'),
+    el('p', 0, 'You passed 500 rage. Take a deep breath and start over.'),
+    b
+  );
+}
+
 function el(tag, cls, html){ const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 function later(fn, ms){ const id = setTimeout(fn, ms); timers.push(id); return id; }
 function frame(fn){
@@ -246,10 +268,10 @@ function intro(){
   $('#lvl').textContent = '9 Levels';
   const best = JSON.parse(localStorage.getItem('uitrap_best') || 'null');
   const startBtn = ok(el('button', 'btn', 'Start Game'));
-  startBtn.onclick = () => { rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; tone(520, 0.08); load(); };
+  startBtn.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; tone(520, 0.08); load(); };
   stage.append(
     el('h1', 0, 'UI Trap'),
-    el('p', 0, 'A 9-level hostile interface puzzle. Every misclick adds rage.'),
+    el('p', 0, 'A 9-level hostile interface puzzle. Hit 500 rage and you start over.'),
     startBtn
   );
   if (best) stage.append(el('p', 'meta', `Best Run: ${best.s}s · ${best.rage} rage`));
@@ -263,7 +285,7 @@ function load(){
   stage.append(el('h1', 0, L.title)); L.run();
   later(() => {
     const b = el('button', 'btn ghost', 'hint (+5 rage)'); b.id = 'hintbtn';
-    b.onclick = () => { bump(5); b.replaceWith(el('p', 'hint', '💡 ' + L.hint)); };
+    b.onclick = () => { bump(5); if (!locked) b.replaceWith(el('p', 'hint', '💡 ' + L.hint)); };
     stage.append(b);
   }, 22000);
 }
@@ -278,14 +300,14 @@ function finish(){
   say('Now make a friend play it.');
   const row = el('div', 'row');
   const again = ok(el('button', 'btn', 'Play Again'));
-  again.onclick = () => { rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; load(); };
+  again.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; load(); };
   const share = ok(el('button', 'btn ghost', 'Copy Score'));
   share.onclick = () => {
-    navigator.clipboard?.writeText(`UI Trap — Cleared 9/9 in ${s}s with ${rage} rage 😡`);
+    navigator.clipboard?.writeText(`UI Trap — Cleared 9/9 in ${s}s with ${rage}/500 rage 😡`);
     share.textContent = 'Copied!';
   };
   row.append(again, share);
-  stage.append(el('h1', 0, 'You win.'), el('p', 0, `Time: ${s}s · Rage: ${rage}`), row);
+  stage.append(el('h1', 0, 'You win.'), el('p', 0, `Time: ${s}s · Rage: ${rage}/500`), row);
 }
 
 intro();
