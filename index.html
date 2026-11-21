@@ -14,8 +14,9 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;pa
 header.mad{animation:sh .25s;border-color:var(--bad)}
 header.mad #rage{color:var(--bad)}
 #rage{display:inline-block;transition:transform .15s,color .2s}
-.hdr-r{display:flex;align-items:center;gap:14px}
-#mute{background:none;border:2px solid var(--fg);color:var(--fg);font:inherit;font-size:12px;padding:2px 8px;cursor:pointer}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.hdr-btn{background:none;border:2px solid var(--fg);color:var(--fg);font:inherit;font-size:12px;padding:2px 8px;cursor:pointer}
+#giveup{display:none;border-color:var(--bad);color:var(--bad)}
 #stage{position:relative;flex:1;overflow:hidden;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
 #stage.flash{animation:fl .7s}
 @keyframes fl{from{background:#1f3d00}to{background:transparent}}
@@ -42,7 +43,8 @@ p{margin:0;max-width:60ch}
 #pw-clue{cursor:pointer}
 .pop{position:fixed;pointer-events:none;color:var(--bad);font-weight:700;font-size:18px;z-index:999;animation:up .55s ease-out forwards}
 @keyframes up{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-34px)}}
-.bait{position:absolute;background:#161616;border:3px solid var(--fg);box-shadow:8px 8px 0 var(--bad);padding:20px 24px;display:flex;flex-direction:column;gap:12px;align-items:center;z-index:20}
+.bait,.modal{position:absolute;background:#161616;border:3px solid var(--fg);box-shadow:8px 8px 0 var(--bad);padding:22px 26px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:20;max-width:min(90vw,420px)}
+.modal{z-index:30;background:#0e0e0e}
 </style>
 </head>
 <body>
@@ -51,7 +53,8 @@ p{margin:0;max-width:60ch}
   <span id="lvl">Ready</span>
   <div class="hdr-r">
     <span>😡 rage: <b id="rage">0</b></span>
-    <button id="mute" title="Toggle Sound">SFX: ON</button>
+    <button id="giveup" class="hdr-btn" title="Quit">Give Up</button>
+    <button id="mute" class="hdr-btn" title="Toggle Sound">SFX: ON</button>
   </div>
 </header>
 <main id="stage"></main>
@@ -88,6 +91,47 @@ $('#mute').onclick = e => {
   e.stopPropagation();
   muted = !muted;
   $('#mute').textContent = muted ? 'SFX: OFF' : 'SFX: ON';
+};
+
+// Hostile "Give Up" confirmation chain
+const quitChain = [
+  ['Are you sure?', 'Quitting now means the UI won.'],
+  ['Really sure?', 'Your friends will know you gave up on a 9-level website.'],
+  ['Think about this.', 'Even my grandma cleared this level.'],
+  ['Last chance.', 'Click Yes to permanently admit defeat.'],
+  ['Too bad.', 'The quit button broke. Get back to work.']
+];
+
+$('#giveup').onclick = e => {
+  e.stopPropagation();
+  if (locked || $('.modal')) return;
+  let step = 0;
+  const box = ok(el('div', 'modal'));
+  const h = el('p', 0, `<b>${quitChain[0][0]}</b>`);
+  const sub = el('p', 0, quitChain[0][1]);
+  const row = el('div', 'row');
+  const stay = ok(el('button', 'btn', 'Keep Playing'));
+  const yes = ok(el('button', 'btn ghost', 'Yes, Quit'));
+
+  stay.onclick = () => { box.remove(); say('Good choice. Cowardice avoided.'); };
+  yes.onclick = () => {
+    step++;
+    if (step < quitChain.length) {
+      bump(2);
+      if (locked) return;
+      h.innerHTML = `<b>${quitChain[step][0]}</b>`;
+      sub.textContent = quitChain[step][1];
+      if (step === quitChain.length - 1) {
+        yes.remove();
+        stay.textContent = 'Fine, I will play';
+        bump(3);
+      }
+    }
+  };
+
+  row.append(stay, yes);
+  box.append(h, sub, row);
+  stage.append(box);
 };
 
 const wins = ['Fine. You got that one.', 'Lucky.', 'Okay, okay.', 'Wow. Took you long enough.', 'Cleared. Do not get cocky.'];
@@ -138,6 +182,7 @@ function bump(n = 1){
 function rageQuit(customMsg){
   locked = true;
   clear();
+  $('#giveup').style.display = 'none';
   tone(120, 0.45, 'sawtooth', 42);
   $('#lvl').textContent = 'MELTDOWN';
   say(customMsg || `Surprise: ${MAX_RAGE} rage is the limit. Back to Level 1.`);
@@ -188,7 +233,7 @@ function clear(){
 }
 
 document.addEventListener('click', e => {
-  if (e.target.closest('[data-ok],#hintbtn,#mute')) return;
+  if (e.target.closest('[data-ok],#hintbtn,#mute,#giveup')) return;
   bump(); if (++misses % 3 === 0) say(pick(taunts));
 });
 
@@ -397,6 +442,7 @@ const levels = [
 function intro(){
   clear();
   updateHeat();
+  $('#giveup').style.display = 'none';
   $('#lvl').textContent = '9 Levels';
   const best = JSON.parse(localStorage.getItem('uitrap_best') || 'null');
   const startBtn = ok(el('button', 'btn', 'Start Game'));
@@ -412,6 +458,7 @@ function intro(){
 function load(){
   clear(); stage.classList.remove('flash');
   if (lv >= levels.length) return finish();
+  $('#giveup').style.display = 'inline-block';
   const L = levels[lv];
   lvFails = 0;
   let hintShown = false;
@@ -431,6 +478,7 @@ function load(){
 }
 
 function finish(){
+  $('#giveup').style.display = 'none';
   const s = Math.round((Date.now() - t0) / 1000);
   const prev = JSON.parse(localStorage.getItem('uitrap_best') || 'null');
   if (!prev || rage < prev.rage || (rage === prev.rage && s < prev.s)) {
