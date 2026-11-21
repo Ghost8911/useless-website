@@ -39,6 +39,7 @@ p{margin:0;max-width:60ch}
 .hint{color:var(--ac)}
 .meta{font-size:13px;opacity:.75}
 #dot{font-weight:700;font-size:1.3em;cursor:pointer}
+#pw-clue{cursor:pointer}
 .pop{position:fixed;pointer-events:none;color:var(--bad);font-weight:700;font-size:18px;z-index:999;animation:up .55s ease-out forwards}
 @keyframes up{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-34px)}}
 .bait{position:absolute;background:#161616;border:3px solid var(--fg);box-shadow:8px 8px 0 var(--bad);padding:20px 24px;display:flex;flex-direction:column;gap:12px;align-items:center;z-index:20}
@@ -58,6 +59,7 @@ p{margin:0;max-width:60ch}
 <script>
 const $ = s => document.querySelector(s), stage = $('#stage'), hdr = $('#hdr');
 const pick = a => a[Math.floor(Math.random() * a.length)];
+const isTouch = matchMedia('(pointer: coarse)').matches;
 let lv = 0, rage = 0, t0 = 0, timers = [], rafs = [], cleanup = [], locked = false, misses = 0, muted = false;
 let ptr = { x: innerWidth / 2, y: innerHeight / 2 };
 
@@ -88,7 +90,7 @@ $('#mute').onclick = e => {
 };
 
 const wins = ['Fine. You got that one.', 'Lucky.', 'Okay, okay.', 'Wow. Took you long enough.', 'Cleared. Do not get cocky.'];
-const taunts = ['Not that.', 'Have you tried not failing?', 'Bold strategy.', 'The interface is laughing.', 'Wrong. Confidently wrong.', 'Think outside the mouse.', 'It is not broken. You are.', 'Your mouse privileges should be revoked.', 'Getting warm. Mostly from anger.'];
+const taunts = ['Not that.', 'Have you tried not failing?', 'Bold strategy.', 'The interface is laughing.', 'Wrong. Confidently wrong.', 'Think outside the screen.', 'It is not broken. You are.', 'Your tapping privileges should be revoked.', 'Getting warm. Mostly from anger.'];
 
 function say(t){ $('#taunt').textContent = t; }
 
@@ -197,7 +199,8 @@ function win(){
 }
 
 const levels = [
-  { title: 'Level 1: Click Next', hint: 'Nobody said you needed the mouse. Tab, then Enter.',
+  { title: 'Level 1: Click Next',
+    hint: isTouch ? 'Just tap the button. Only mouse users suffer here.' : 'Nobody said you needed the mouse. Tab, then Enter.',
     run(){
       const b = ok(el('button', 'btn', 'Next'));
       b.style.cssText = 'position:absolute;left:calc(50% - 45px);top:62%';
@@ -232,16 +235,22 @@ const levels = [
       ok(p.querySelector('#dot')).onclick = win;
       stage.append(el('p', 0, 'Pick the right button to continue.'), row, p);
     } },
-  { title: 'Level 3: Max Volume', hint: 'Sliders have keyboards. Click it once, then press the End key.',
+  { title: 'Level 3: Max Volume',
+    hint: isTouch ? 'Stop dragging the slider. Double-tap the big 0 below it.' : 'Sliders have keyboards. Click it once, then press the End key.',
     run(){
       const s = ok(el('input')); s.type = 'range'; s.min = 0; s.max = 100; s.value = 0; s.style.width = 'min(80vw,520px)';
-      const out = el('div', 'big', '0'); let drag = false;
+      const out = ok(el('div', 'big', '0')); let drag = false, taps = 0;
+      out.style.cursor = 'pointer';
       on(s, 'pointerdown', () => drag = true);
       on(document, 'pointerup', () => drag = false);
       on(s, 'input', () => {
         if (drag && +s.value >= 92) { s.value = Math.floor(Math.random() * 35); bump(); }
         out.textContent = s.value;
         if (+s.value === 100 && !drag) win();
+      });
+      on(out, 'click', () => {
+        if (++taps >= 2) { s.value = 100; out.textContent = '100'; win(); }
+        later(() => taps = 0, 400);
       });
       stage.append(el('p', 0, 'Set the slider to exactly 100.'), s, out);
     } },
@@ -273,17 +282,21 @@ const levels = [
       const c = ok(el('button', 'btn ghost tiny', 'cancel')); c.onclick = () => { msg.textContent = 'Cancelled.'; win(); };
       stage.append(msg, bar, row, c);
     } },
-  { title: 'Level 5: Password', hint: 'Look up. Higher. The browser tab.',
+  { title: 'Level 5: Password',
+    hint: isTouch ? 'Tap the word "password" in the sentence above.' : 'Look up. Higher. The browser tab.',
     run(){
       document.title = '🔑 password: RAGEQUIT';
+      const prompt = el('p', 0, 'Enter the <span id="pw-clue">password</span>. It is closer than you think.');
+      const clue = ok(prompt.querySelector('#pw-clue'));
+      clue.onclick = () => say('🔑 password: RAGEQUIT');
       const i = ok(el('input', 'txt')); i.placeholder = 'password'; i.autocomplete = 'off';
       const b = ok(el('button', 'btn', 'Unlock'));
       const go = () => {
         if (i.value.trim().toLowerCase() === 'ragequit') return win();
-        i.value = ''; bump(2); say(pick(['Wrong. Look up.', 'Nope. Higher.', 'Check where you are right now.']));
+        i.value = ''; bump(2); say(pick(['Wrong. Look closer.', 'Nope.', 'Check the tab or tap "password".']));
       };
       b.onclick = go; i.onkeydown = e => { if (e.key === 'Enter') go(); };
-      stage.append(el('p', 0, 'Enter the password. It is closer than you think.'), i, b);
+      stage.append(prompt, i, b);
     } },
   { title: 'Level 6: The Code', hint: 'You cannot see it. Select everything: Ctrl+A or tap the empty space below.',
     run(){
@@ -295,22 +308,35 @@ const levels = [
       b.onclick = go; i.onkeydown = e => { if (e.key === 'Enter') go(); };
       stage.append(el('p', 0, 'Enter the code shown below.'), el('p', 'decoy', 'CODE: 0000'), g, i, b);
     } },
-  { title: 'Level 7: Cookies', hint: 'Banners hate the mouse but love the Escape key.',
+  { title: 'Level 7: Cookies',
+    hint: isTouch ? 'Swipe the buttons away to dismiss the banner.' : 'Banners hate the mouse but love the Escape key.',
     run(){
-      const box = el('div', 'row');
+      const box = ok(el('div', 'row'));
       ['Accept all', 'Accept some', 'Manage'].forEach(t => {
         const f = el('button', 'btn', t);
         f.onclick = () => { say('Cookies accepted. All of them. Forever.'); bump(2); };
         box.append(f);
       });
+      let sx = 0;
+      on(stage, 'touchstart', e => sx = e.touches[0].clientX, { passive: true });
+      on(stage, 'touchend', e => { if (Math.abs(e.changedTouches[0].clientX - sx) > 70) win(); }, { passive: true });
       stage.append(el('p', 0, 'We value your privacy. Please choose.'), box);
       on(document, 'keydown', e => { if (e.key === 'Escape') win(); });
     } },
-  { title: 'Level 8: Not a Robot', hint: 'Robots click. Humans press Space. Tab to the box first.',
+  { title: 'Level 8: Not a Robot',
+    hint: isTouch ? 'Quick taps are for bots. Press and hold the box for 1 second.' : 'Robots click. Humans press Space. Tab to the box first.',
     run(){
       const c = ok(el('input')); c.type = 'checkbox'; c.style.cssText = 'width:44px;height:44px;cursor:pointer';
+      let holdTimer = null, held = false;
+      on(c, 'pointerdown', e => {
+        if (e.pointerType === 'mouse') return;
+        holdTimer = later(() => { held = true; c.checked = true; win(); }, 750);
+      });
+      on(c, 'pointerup', () => clearTimeout(holdTimer));
+      on(c, 'pointercancel', () => clearTimeout(holdTimer));
       on(c, 'click', e => {
-        if (e.detail > 0) { e.preventDefault(); bump(); say('A robot would click. Try again.'); }
+        if (held) return;
+        if (e.detail > 0) { e.preventDefault(); bump(); say(isTouch ? 'Too fast. Hold it down.' : 'A robot would click. Try again.'); }
         else win();
       });
       stage.append(el('p', 0, 'Prove you are human.'), c, el('p', 0, 'I am not a robot'));
