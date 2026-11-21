@@ -60,7 +60,8 @@ p{margin:0;max-width:60ch}
 const $ = s => document.querySelector(s), stage = $('#stage'), hdr = $('#hdr');
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const isTouch = matchMedia('(pointer: coarse)').matches;
-let lv = 0, rage = 0, t0 = 0, timers = [], rafs = [], cleanup = [], locked = false, misses = 0, muted = false;
+const MAX_RAGE = 300;
+let lv = 0, rage = 0, lvFails = 0, t0 = 0, timers = [], rafs = [], cleanup = [], locked = false, misses = 0, muted = false;
 let ptr = { x: innerWidth / 2, y: innerHeight / 2 };
 
 document.addEventListener('pointermove', e => { ptr.x = e.clientX; ptr.y = e.clientY; }, { passive: true });
@@ -112,25 +113,26 @@ function updateHeat(){
     rEl.style.color = '';
     return;
   }
-  const ratio = Math.min(1, rage / 100);
+  const ratio = Math.min(1, rage / MAX_RAGE);
   const red = Math.round(14 + ratio * 38);
   document.body.style.background = `rgb(${red}, 10, 10)`;
   rEl.style.transform = `scale(${1 + ratio * 0.35})`;
-  if (rage >= 60) rEl.style.color = 'var(--bad)';
-  document.body.classList.toggle('danger', rage >= 80);
+  if (ratio >= 0.6) rEl.style.color = 'var(--bad)';
+  document.body.classList.toggle('danger', ratio >= 0.8);
 }
 
 function bump(n = 1){
   if (locked) return;
   rage += n;
+  lvFails++;
   updateHeat();
   spawnPop(n);
   hdr.classList.remove('mad'); void hdr.offsetWidth; hdr.classList.add('mad');
   tone(150, 0.12, 'sawtooth', 85);
-  if (rage >= 80 && rage <= 100) {
+  if (rage >= MAX_RAGE * 0.8 && rage <= MAX_RAGE) {
     later(() => tone(95, 0.07, 'sine', 65), 110);
   }
-  if (rage > 100) rageQuit();
+  if (rage > MAX_RAGE) rageQuit();
 }
 
 function rageQuit(customMsg){
@@ -138,17 +140,17 @@ function rageQuit(customMsg){
   clear();
   tone(120, 0.45, 'sawtooth', 42);
   $('#lvl').textContent = 'MELTDOWN';
-  say(customMsg || 'Surprise: 100 rage is the limit. Back to Level 1.');
+  say(customMsg || `Surprise: ${MAX_RAGE} rage is the limit. Back to Level 1.`);
   const b = ok(el('button', 'btn', 'Try Again'));
   b.onclick = () => {
     locked = false;
-    rage = 0; misses = 0; lv = 0; t0 = Date.now();
+    rage = 0; lvFails = 0; misses = 0; lv = 0; t0 = Date.now();
     updateHeat();
     load();
   };
   stage.append(
     el('h1', 0, 'RAGE OVERFLOW'),
-    el('p', 0, customMsg ? 'No cheat codes allowed. Start from the beginning.' : 'You passed 100 rage. Oh, did we forget to mention there was a limit? Start over.'),
+    el('p', 0, customMsg ? 'No cheat codes allowed. Start from the beginning.' : `You passed ${MAX_RAGE} rage. Oh, did we forget to mention there was a limit? Start over.`),
     b
   );
 }
@@ -162,7 +164,7 @@ document.addEventListener('keydown', e => {
   kIdx = (k === konami[kIdx]) ? kIdx + 1 : (k === konami[0] ? 1 : 0);
   if (kIdx === konami.length) {
     kIdx = 0;
-    rage = 101;
+    rage = MAX_RAGE + 1;
     updateHeat();
     rageQuit('Nice try, hacker. Back to Level 1.');
   }
@@ -398,7 +400,7 @@ function intro(){
   $('#lvl').textContent = '9 Levels';
   const best = JSON.parse(localStorage.getItem('uitrap_best') || 'null');
   const startBtn = ok(el('button', 'btn', 'Start Game'));
-  startBtn.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); updateHeat(); tone(520, 0.08); load(); };
+  startBtn.onclick = () => { locked = false; rage = 0; lvFails = 0; misses = 0; lv = 0; t0 = Date.now(); updateHeat(); tone(520, 0.08); load(); };
   stage.append(
     el('h1', 0, 'UI Trap'),
     el('p', 0, 'A 9-level hostile interface puzzle. Every misclick adds rage.'),
@@ -410,7 +412,8 @@ function intro(){
 function load(){
   clear(); stage.classList.remove('flash');
   if (lv >= levels.length) return finish();
-  const L = levels[lv], startRage = rage;
+  const L = levels[lv];
+  lvFails = 0;
   let hintShown = false;
   $('#lvl').textContent = `Level ${lv + 1}/${levels.length}`;
   stage.append(el('h1', 0, L.title)); L.run();
@@ -424,7 +427,7 @@ function load(){
   };
 
   later(showHintBtn, 12000);
-  frame(() => { if (!hintShown && rage - startRage >= 8) showHintBtn(); });
+  frame(() => { if (!hintShown && lvFails >= 20) showHintBtn(); });
 }
 
 function finish(){
@@ -437,7 +440,7 @@ function finish(){
   say('Now make a friend play it.');
   const row = el('div', 'row');
   const again = ok(el('button', 'btn', 'Play Again'));
-  again.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); updateHeat(); load(); };
+  again.onclick = () => { locked = false; rage = 0; lvFails = 0; misses = 0; lv = 0; t0 = Date.now(); updateHeat(); load(); };
   const share = ok(el('button', 'btn ghost', 'Copy Score'));
   share.onclick = () => {
     navigator.clipboard?.writeText(`UI Trap — Cleared 9/9 in ${s}s with ${rage} rage 😡`);
