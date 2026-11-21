@@ -44,12 +44,12 @@ p{margin:0;max-width:60ch}
   <span>UI Trap</span>
   <span id="lvl">Ready</span>
   <div class="hdr-r">
-    <span>😡 rage: <b id="rage">0</b>/100</span>
+    <span>😡 rage: <b id="rage">0</b></span>
     <button id="mute" title="Toggle Sound">SFX: ON</button>
   </div>
 </header>
 <main id="stage"></main>
-<footer id="taunt">9 levels. Pass 100 rage and you start over.</footer>
+<footer id="taunt">9 levels. Trust nothing on the screen.</footer>
 <script>
 const $ = s => document.querySelector(s), stage = $('#stage'), hdr = $('#hdr');
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -96,7 +96,7 @@ function rageQuit(){
   clear();
   tone(120, 0.4, 'sawtooth', 45);
   $('#lvl').textContent = 'MELTDOWN';
-  say('You actually raged out. Back to Level 1.');
+  say('Surprise: 100 rage is the limit. Back to Level 1.');
   const b = ok(el('button', 'btn', 'Try Again'));
   b.onclick = () => {
     locked = false;
@@ -106,7 +106,7 @@ function rageQuit(){
   };
   stage.append(
     el('h1', 0, 'RAGE OVERFLOW'),
-    el('p', 0, 'You passed 100 rage. Take a deep breath and start over.'),
+    el('p', 0, 'You passed 100 rage. Oh, did we forget to mention there was a limit? Start over.'),
     b
   );
 }
@@ -271,7 +271,7 @@ function intro(){
   startBtn.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; tone(520, 0.08); load(); };
   stage.append(
     el('h1', 0, 'UI Trap'),
-    el('p', 0, 'A 9-level hostile interface puzzle. Hit 100 rage and you start over.'),
+    el('p', 0, 'A 9-level hostile interface puzzle. Every misclick adds rage.'),
     startBtn
   );
   if (best) stage.append(el('p', 'meta', `Best Run: ${best.s}s · ${best.rage} rage`));
@@ -303,11 +303,11 @@ function finish(){
   again.onclick = () => { locked = false; rage = 0; misses = 0; lv = 0; t0 = Date.now(); $('#rage').textContent = 0; load(); };
   const share = ok(el('button', 'btn ghost', 'Copy Score'));
   share.onclick = () => {
-    navigator.clipboard?.writeText(`UI Trap — Cleared 9/9 in ${s}s with ${rage}/100 rage 😡`);
+    navigator.clipboard?.writeText(`UI Trap — Cleared 9/9 in ${s}s with ${rage} rage 😡`);
     share.textContent = 'Copied!';
   };
   row.append(again, share);
-  stage.append(el('h1', 0, 'You win.'), el('p', 0, `Time: ${s}s · Rage: ${rage}/100`), row);
+  stage.append(el('h1', 0, 'You win.'), el('p', 0, `Time: ${s}s · Rage: ${rage}`), row);
 }
 
 intro();
