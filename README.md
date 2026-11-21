@@ -1,31 +1,45 @@
-# useless-website
-just to make the user ragebait 
-# UI Trap
+# Useless Website
 
-A 9-level puzzle game where the user interface actively hates you.
+A puzzle game where the website itself is the problem.
 
-**[Play it here](https://ghost8911.github.io/ui-trap/)**
+## Description
+
+Ever had a website where the button keeps moving, the loading bar never finishes, or some cookie popup just refuses to go away? Yeah, I made all of that worse on purpose.
+
+This is basically a game made out of the most annoying things on the internet. There are 9 levels, and your job is to get through all of them without losing your mind (or getting too much Rage). Every wrong click adds `+1` Rage, so try not to click everything like a maniac. Some levels might need a bit more than just your mouse. Try using `Tab`, `Enter`, `Space`, `End`, `Esc`, selecting text, or just looking around the page. Everything is in `index.html`, including the sounds—they're generated using the Web Audio API, so no external sound files are needed.
+
+### Screenshots
 
 ![screenshot](screenshot.png)
 
-## What is this?
+## Getting Started
 
-I wanted to make a game out of all the annoying UI patterns we deal with online—buttons that dodge your cursor, loading bars stuck at 99%, fake cookie banners, and checkboxes that refuse to be clicked. 
+### Dependencies
 
-Everything is packed into a single `index.html` file with zero libraries or external audio files (the sound effects are synthesized directly with the Web Audio API).
+- A browser (Chrome, Firefox, Edge, Safari, basically anything modern)
+- Git (only if you want to clone it)
 
-## How to play
+### Installing
 
-Beat all 9 levels with as little **Rage** as possible. 
-
-- Clicking anywhere that isn't the actual solution adds `+1` rage.
-- If normal clicking doesn't work, stop using your mouse—try keyboard shortcuts (`Tab`, `Enter`, `Space`, `End`, `Esc`), selecting hidden text, or looking closely at the page.
-- If you get stuck for 22 seconds, a hint button pops up (for a `+5` rage penalty).
-
-## Running it locally
-
-Just clone the repo and open `index.html` in your browser:
+- Clone the repo:
 
 ```bash
-git clone [https://github.com/Ghost8911/ui-trap.git](https://github.com/Ghost8911/ui-trap.git)
-cd ui-trap
+git clone [https://github.com/Ghost8911/useless-website.git](https://github.com/Ghost8911/useless-website.git)
+cd useless-website
+```
+
+- That's pretty much it. No libraries, no extra files to install, no complicated setup.
+### Executing program
+
+- Just open `index.html` in your browser.
+- Or, if you prefer running it through a local server:
+```bash
+npx serve .
+```
+## Help
+- **Stuck?** If you've been stuck on a level for a while, a hint button shows up after 22 seconds. It might help, but it'll cost you `+5` Rage. Because apparently even help isn't free.
+- **Sound not working?** Your browser probably hasn't allowed audio yet. Click somewhere on the page first, then try again.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE.md file for details
