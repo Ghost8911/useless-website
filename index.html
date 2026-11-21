@@ -200,7 +200,9 @@ function win(){
 
 const levels = [
   { title: 'Level 1: Click Next',
-    hint: isTouch ? 'Just tap the button. Only mouse users suffer here.' : 'Nobody said you needed the mouse. Tab, then Enter.',
+    hint: () => isTouch
+      ? 'Tap Next directly—it only runs away from a mouse cursor.'
+      : 'Stop chasing it with the mouse. Press Tab to highlight Next, then press Enter.',
     run(){
       const b = ok(el('button', 'btn', 'Next'));
       b.style.cssText = 'position:absolute;left:calc(50% - 45px);top:62%';
@@ -219,7 +221,10 @@ const levels = [
       });
       b.onclick = win;
     } },
-  { title: 'Level 2: Continue', hint: 'Read the sentence. All the way to the end.',
+  { title: 'Level 2: Continue',
+    hint: () => isTouch
+      ? 'All three buttons are fake. Tap the tiny period "." at the end of the sentence.'
+      : 'All three buttons are fake. Click the period "." at the end of the sentence.',
     run(){
       const row = el('div', 'row');
       ['CONTINUE', 'NEXT ▶', 'GO'].forEach(t => {
@@ -236,7 +241,9 @@ const levels = [
       stage.append(el('p', 0, 'Pick the right button to continue.'), row, p);
     } },
   { title: 'Level 3: Max Volume',
-    hint: isTouch ? 'Stop dragging the slider. Double-tap the big 0 below it.' : 'Sliders have keyboards. Click it once, then press the End key.',
+    hint: () => isTouch
+      ? 'Dragging the slider resets it. Double-tap the big "0" below the bar.'
+      : 'Dragging resets it. Click the slider once, then press the End key on your keyboard.',
     run(){
       const s = ok(el('input')); s.type = 'range'; s.min = 0; s.max = 100; s.value = 0; s.style.width = 'min(80vw,520px)';
       const out = ok(el('div', 'big', '0')); let drag = false, taps = 0;
@@ -254,7 +261,10 @@ const levels = [
       });
       stage.append(el('p', 0, 'Set the slider to exactly 100.'), s, out);
     } },
-  { title: 'Level 4: Loading', hint: 'It will never finish. The faint little button is the honest one.',
+  { title: 'Level 4: Loading',
+    hint: () => isTouch
+      ? 'It never finishes. Tap the tiny faded "cancel" button at the very bottom.'
+      : 'It never finishes. Click the tiny faded "cancel" button at the very bottom.',
     run(){
       const msg = el('p', 0, 'Loading… 0%'), bar = el('div', 'bar', '<i></i>'), fill = bar.firstChild;
       let p = 0, last = performance.now();
@@ -283,7 +293,9 @@ const levels = [
       stage.append(msg, bar, row, c);
     } },
   { title: 'Level 5: Password',
-    hint: isTouch ? 'Tap the word "password" in the sentence above.' : 'Look up. Higher. The browser tab.',
+    hint: () => isTouch
+      ? 'Tap the word "password" in the sentence above to reveal it in the bottom bar.'
+      : 'Look up at your browser tab title—the password is written right there.',
     run(){
       document.title = '🔑 password: RAGEQUIT';
       const prompt = el('p', 0, 'Enter the <span id="pw-clue">password</span>. It is closer than you think.');
@@ -298,7 +310,10 @@ const levels = [
       b.onclick = go; i.onkeydown = e => { if (e.key === 'Enter') go(); };
       stage.append(prompt, i, b);
     } },
-  { title: 'Level 6: The Code', hint: 'You cannot see it. Select everything: Ctrl+A or tap the empty space below.',
+  { title: 'Level 6: The Code',
+    hint: () => isTouch
+      ? '0000 is fake. Tap the blank empty gap right above the input box to highlight the hidden code.'
+      : '0000 is fake. Press Ctrl+A (or drag-select the blank space above the input box) to reveal the real code.',
     run(){
       const code = String(1000 + Math.floor(Math.random() * 9000));
       const g = ok(el('p', 'ghost', 'CODE: ' + code));
@@ -309,7 +324,9 @@ const levels = [
       stage.append(el('p', 0, 'Enter the code shown below.'), el('p', 'decoy', 'CODE: 0000'), g, i, b);
     } },
   { title: 'Level 7: Cookies',
-    hint: isTouch ? 'Swipe the buttons away to dismiss the banner.' : 'Banners hate the mouse but love the Escape key.',
+    hint: () => isTouch
+      ? 'All buttons are traps. Swipe left or right across the screen to dismiss the banner.'
+      : 'All buttons are traps. Press the Escape (Esc) key on your keyboard.',
     run(){
       const box = ok(el('div', 'row'));
       ['Accept all', 'Accept some', 'Manage'].forEach(t => {
@@ -324,7 +341,9 @@ const levels = [
       on(document, 'keydown', e => { if (e.key === 'Escape') win(); });
     } },
   { title: 'Level 8: Not a Robot',
-    hint: isTouch ? 'Quick taps are for bots. Press and hold the box for 1 second.' : 'Robots click. Humans press Space. Tab to the box first.',
+    hint: () => isTouch
+      ? 'Quick taps fail. Press and hold your finger on the checkbox for 1 full second.'
+      : 'Mouse clicks fail. Press Tab to focus the checkbox, then press the Spacebar.',
     run(){
       const c = ok(el('input')); c.type = 'checkbox'; c.style.cssText = 'width:44px;height:44px;cursor:pointer';
       let holdTimer = null, held = false;
@@ -341,7 +360,10 @@ const levels = [
       });
       stage.append(el('p', 0, 'Prove you are human.'), c, el('p', 0, 'I am not a robot'));
     } },
-  { title: 'Level 9: Hold Still', hint: 'Do nothing. Ignore the popup. Do not touch anything.',
+  { title: 'Level 9: Hold Still',
+    hint: () => isTouch
+      ? 'Take your hands off the screen for 8 seconds. Do NOT tap the fake popup.'
+      : 'Take your hands off the mouse and keyboard for 8 seconds. Ignore the fake popup.',
     run(){
       const start = Date.now(); let end = start + 8000, baited = false;
       const msg = el('p', 0, 'Do nothing for 8 seconds. Do not touch anything.');
@@ -388,14 +410,21 @@ function intro(){
 function load(){
   clear(); stage.classList.remove('flash');
   if (lv >= levels.length) return finish();
-  const L = levels[lv];
+  const L = levels[lv], startRage = rage;
+  let hintShown = false;
   $('#lvl').textContent = `Level ${lv + 1}/${levels.length}`;
   stage.append(el('h1', 0, L.title)); L.run();
-  later(() => {
+
+  const showHintBtn = () => {
+    if (hintShown || locked) return;
+    hintShown = true;
     const b = el('button', 'btn ghost', 'hint (+5 rage)'); b.id = 'hintbtn';
-    b.onclick = () => { bump(5); if (!locked) b.replaceWith(el('p', 'hint', '💡 ' + L.hint)); };
+    b.onclick = () => { bump(5); if (!locked) b.replaceWith(el('p', 'hint', '💡 ' + L.hint())); };
     stage.append(b);
-  }, 22000);
+  };
+
+  later(showHintBtn, 12000);
+  frame(() => { if (!hintShown && rage - startRage >= 8) showHintBtn(); });
 }
 
 function finish(){
