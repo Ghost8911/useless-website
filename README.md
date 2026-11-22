@@ -39,7 +39,3 @@ npx serve .
 ## Help
 - **Stuck?** If you've been stuck on a level for a while, a hint button shows up after 22 seconds. It might help, but it'll cost you `+5` Rage. Because apparently even help isn't free.
 - **Sound not working?** Your browser probably hasn't allowed audio yet. Click somewhere on the page first, then try again.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE.md file for details
